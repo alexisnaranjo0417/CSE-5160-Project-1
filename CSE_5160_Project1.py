@@ -18,7 +18,7 @@ print('Data set size: ', dataset.shape, '\n')
 #Prints the names of the columns/attributes of the dataset
 print('Column Names: \n', dataset.columns.tolist(), '\n')
 
-#Text preprocessing function
+#Clean dataset
 def clean_text(text):
     text = text.lower()  # lowercase
     text = re.sub(r"http\S+", "", text)  # remove URLs
@@ -51,5 +51,15 @@ model.fit(X_train, Y_train)
 #Predictions
 Y_pred = model.predict(X_test)
 
-#Evaluation
+#Logistic evaluation
 print("\nModel Accuracy:", accuracy_score(Y_test, Y_pred))
+
+#SVM model
+svm_model= SVC(kernel='rbf', C=1, random_state=42)
+svm_model.fit(X_train, Y_train)
+
+#Predictions
+Y_svm_pred = svm_model.predict(X_test)
+
+#SVM evaluation
+print("\nSVM Accuracy:", accuracy_score(Y_test, Y_svm_pred))
