@@ -2,7 +2,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
@@ -85,31 +85,43 @@ Y_svm_pred = svm_model.predict(X_test)
 print('\nSVM Classification Report: \n', classification_report(Y_test, Y_svm_pred))
 
 
+#Ridge Regression L2 model
+ridge_model= Ridge(alpha=1)
+ridge_model.fit(X_train, Y_train)
+#Predictions
+Y_ridge_pred_cont = ridge_model.predict(X_test)
+Y_ridge_pred = (Y_ridge_pred_cont >= 0.5).astype (int)
+#Ridge Regression L2 Evaluation 
+print('\nRidge Regression Classification Report: \n', classification_report(Y_test,Y_ridge_pred))
+
+
 #SVM Hyperparameter Tuning with GridSearchCV
 #Define the hyperparameters we want to tune
-#param_grid = {'C' : [0.1, 1, 10, 100],
-#             'kernel' : ['linear', 'rbf'],
- #            'gamma' : [1, 0.1, 0.01, 0.001, 0.0001]}
+#Added smaller set of hyperparameters to speed up process
+param_grid = {'C' : [0.1, 1, 10],
+             'kernel' : ['linear', 'rbf'],
+             'gamma' : [1, 0.1, 0.01]}
+#This creates 3 x 2x 3 = 18 combinations, should be faster than the previous which was 40
+grid = GridSearchCV(SVC(random_state=42), param_grid, refit=True, verbose=3, n_jobs=-1)
+grid.fit(X_train, Y_train)
 
 
-#grid = GridSearchCV(SVC(random_state=42), param_grid, refit=True, verbose=3)
-#grid.fit(X_train, Y_train)
-
-
-#print('\nBest Hyperparameters for SVM: ', grid.best_params_)
+print('\nBest Hyperparameters for SVM: ', grid.best_params_)
 
 
 #Use the best model from grid search to make predictions
-#best_svm_model = grid.best_estimator_
-#Y_best_svm_pred = best_svm_model.predict(X_test)
+best_svm_model = grid.best_estimator_
+Y_best_svm_pred = best_svm_model.predict(X_test)
 
 
-#print('\nGRidSearch SVM Classification Report for Best Model: \n', classification_report(Y_test, Y_best_svm_pred))
+print('\nGRidSearch SVM Classification Report for Best Model: \n', classification_report(Y_test, Y_best_svm_pred))
+
+
 
 
 #Grouped Bar Chart (Comparing All Models)
 #Data to plot
-labels = ['Logistic Regression', 'SVM']
+labels = ['Logistic Regression', 'SVM (Without Hyperparameter)', 'SVM (Hyperparameter)', 'Ridge Regression']
 phishing_f1 = []
 safe_email_f1 = []
 
@@ -121,10 +133,21 @@ phishing_f1.append(lr_report['0']['f1-score'])
 safe_email_f1.append(lr_report['1']['f1-score'])
 
 
-#SVM
-svm_report = classification_report(Y_test, Y_svm_pred, output_dict = True)
+#SVM Without Hyperparameter
+svm_report = classification_report(Y_test, Y_svm_pred, output_dict = True)   #Use's SVM prediction
 phishing_f1.append(svm_report['0']['f1-score'])
 safe_email_f1.append(svm_report['1']['f1-score'])
+
+
+#SVM With Hyperparameter
+svm_tuned_report = classification_report(Y_test, Y_best_svm_pred, output_dict = True)   #Use's best prediction for SVM from grid search
+phishing_f1.append(svm_tuned_report['0']['f1-score'])
+safe_email_f1.append(svm_tuned_report['1']['f1-score'])
+
+
+ridge_report = classification_report(Y_test,Y_ridge_pred, output_dict=True)
+phishing_f1.append(ridge_report['0']['f1-score'])
+safe_email_f1.append(ridge_report['1']['f1-score'])
 
 
 x = np.arange(len(labels)) #Labels locations
@@ -157,6 +180,6 @@ plt.show()
 #Create a confusion matrix for your best model (SVM)
 print('\nSVM Confusion Matrix: ')
 fig, ax = plt.subplots(figsize=(8, 6))
-ConfusionMatrixDisplay.from_estimator(svm_model, X_test, Y_test, ax=ax, cmap=plt.cm.Blues, display_labels=le.classes_)    #Shows original labels "Phishing Email", "Safe Email"
-ax.set_title('Confusion Matrix for SVM')
+ConfusionMatrixDisplay.from_estimator(best_svm_model, X_test, Y_test, ax=ax, cmap=plt.cm.Blues, display_labels=le.classes_)    #Shows original labels "Phishing Email", "Safe Email"
+ax.set_title('Confusion Matrix for Best SVM Model')
 plt.show()
